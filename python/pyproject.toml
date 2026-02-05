@@ -4,15 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "swauto"
-version = "0.0.1"
+version = "0.0.6"
 description = "Python interface for SolidWorks automation"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12,<3.14"
 license = {text = "MIT"}
-authors = [{name = "Your Name"}]
+authors = [{name = "Malacai Hiebert"}]
+dependencies = ["pythonnet==3.0.5"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+
+[tool.setuptools.package-data]
+swauto = ["_dotnet/*.dll"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
