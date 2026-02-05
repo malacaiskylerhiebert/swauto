@@ -13,6 +13,20 @@ from SWAutomation.Core import SWConnect
 
 def attach_or_launch(visible: bool = True):
   """
-  Returns a SolidWorks SldWorks COM object (via C#)
+  Attach to a running SolidWorks session or launch a new one.
+
+  Parameters
+  ----------
+  visible:
+      If True, shows the SolidWorks UI.
+
+  Returns
+  -------
+  SldWorks
+      SolidWorks application COM object.
+
+  Notes
+  -----
+  Requires Windows, 64-bit Python, SolidWorks installed, and pythonnet.
   """
   return SWConnect.AttachOrLaunch(visible)
