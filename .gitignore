@@ -1,0 +1,25 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# --- C# / Visual Studio ---
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Secrets ---
+.pypirc
