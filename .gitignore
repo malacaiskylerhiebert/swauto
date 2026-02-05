@@ -11,8 +11,8 @@ build/
 *.egg-info/
 
 # --- C# / Visual Studio ---
-bin/
-obj/
+**/bin/
+**/obj/
 .vs/
 *.user
 *.suo
