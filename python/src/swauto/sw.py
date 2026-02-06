@@ -9,7 +9,7 @@ os.environ["PATH"] = _DLL_DIR + os.pathsep + os.environ.get("PATH", "")
 
 clr.AddReference(_DLL_PATH)
 
-from SWAutomation.Core import SWConnect
+from SWAutomation.Core import SWConnect, SWDocuments
 
 def attach_or_launch(visible: bool = True):
   """
@@ -30,3 +30,6 @@ def attach_or_launch(visible: bool = True):
   Requires Windows, 64-bit Python, SolidWorks installed, and pythonnet.
   """
   return SWConnect.AttachOrLaunch(visible)
+
+def open_assembly(app: object, path: str) -> bool:
+  return SWDocuments.OpenAssembly(app, path)
