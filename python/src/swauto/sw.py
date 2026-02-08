@@ -5,39 +5,21 @@ import threading
 from pathlib import Path
 import clr # pythonnet
 
-# function to find repo root folder path
-def _find_repo_root(start: Path) -> Path:
-  for p in [start, *start.parents]:
-    if (p / "pyproject.toml").is_file() or (p / ".git").exists():
-      return p
-  raise FileNotFoundError("Could not locate repo root (pyproject.tml/.git not found).")
-
-# function to find dotnet dll path
-def _get_dotnet_dll_path() -> Path:
-  override = os.environ.get("SWAUTO_DOTNET_DIR")
-  if override:
-    dotnet_dir = Path(override).expanduser().resolve()
-  else:
-    pkg_dir = Path(__file__).resolve().parent
-    repo_root = _find_repo_root(pkg_dir)
-    dotnet_dir = (repo_root / "dotnet").resolve()
-  
-  dll = dotnet_dir / "SWAutomation.Core" / "bin" / "x64" / "SWAutomation.Core.dll"
-
-  if not dotnet_dir.is_dir():
-    raise FileNotFoundError(f"dotnet directory not found: {dotnet_dir}")
+def _resolve_dotnet_dll() -> Path:
+  # sw.py is in swauto/, so _dotnet is sibling folder
+  dll = Path(__file__).resolve().parent / "_dotnet" / "SWAutomation.Core.dll"
   if not dll.is_file():
-    raise FileNotFoundError(f"DLL not found: {dll}")
-  
-  dll.relative_to(dotnet_dir)
-
+    raise FileNotFoundError(
+      f"Missing SWAutomation.Core.dll at {dll}. "
+      "Ensure the DLL is copied into swauto/_dotnet/."
+    )
   return dll
+
 
 def _load_dotnet():
   if getattr(_load_dotnet, "_loaded", False):
-        return
-  dll_path = _get_dotnet_dll_path()
-  clr.AddReference(str(dll_path))
+    return
+  clr.AddReference(str(_resolve_dotnet_dll()))
   _load_dotnet._loaded = True
 
 ## future commands
@@ -67,9 +49,9 @@ class SWInstance:
             return
 
         _load_dotnet()
-        from SWAutomation.Core import SwSession  # type: ignore
+        from SWAutomation.Core import SWSession  # type: ignore
 
-        self._session = SwSession()
+        self._session = SWSession()
         self._session.Connect(visible, attach_if_running)
 
     def open_assembly(self, path: str, silent: bool = True):

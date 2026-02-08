@@ -39,7 +39,10 @@ namespace SWAutomation.Core
                 }
 
                 if (_app == null)
-                    _app = new SldWorks();
+                {
+                    var t = Type.GetTypeFromProgID("SldWorks.Application");
+                    _app = (SldWorks)Activator.CreateInstance(t);
+                }
 
                 _app.Visible = visible;
                 _connected = true;
