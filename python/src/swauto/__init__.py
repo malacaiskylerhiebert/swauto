@@ -1,3 +1,3 @@
-from .sw import attach_or_launch, open_assembly
+from .sw import SWInstance
 
-__all__ = ["attach_or_launch", "open_assembly"]
+__all__ = ["SWInstance"]
