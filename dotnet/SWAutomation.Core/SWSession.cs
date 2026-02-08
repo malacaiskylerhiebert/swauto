@@ -10,6 +10,7 @@ namespace SWAutomation.Core
         private readonly STADispatcher _sta;
         private SldWorks _app;
         private bool _connected;
+        private bool _launchedByUs;
 
         public SWSession()
         {
@@ -42,9 +43,14 @@ namespace SWAutomation.Core
                 {
                     var t = Type.GetTypeFromProgID("SldWorks.Application");
                     _app = (SldWorks)Activator.CreateInstance(t);
+                    _launchedByUs = true;
+                }
+                else
+                {
+                    _launchedByUs = false;
                 }
 
-                _app.Visible = visible;
+                    _app.Visible = visible;
                 _connected = true;
                 return 0;
             });
@@ -74,20 +80,33 @@ namespace SWAutomation.Core
 
         public string GetRevision()
             => InvokeSW(app => app.RevisionNumber());
-
-        public void Dispose()
+        public void Shutdown(bool force = false)
         {
+            if (!_connected) return;
+
             _sta.Invoke(() =>
             {
                 if (_app != null)
                 {
+                    try
+                    {
+                        if (force || _launchedByUs)
+                            _app.ExitApp();
+                    }
+                    catch { /* ignore */ }
+
                     try { Marshal.FinalReleaseComObject(_app); } catch { }
                     _app = null;
                 }
+
                 _connected = false;
                 return 0;
             });
+        }
 
+        public void Dispose()
+        {
+            Shutdown(force: false);   // only closes if we launched it
             _sta.Dispose();
         }
     }
