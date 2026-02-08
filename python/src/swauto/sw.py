@@ -78,7 +78,7 @@ class SWInstance:
     
   def close(self):
     """
-    Closes the instance and only closes the program if it was opened by us.
+    Closes the instance and only closes the program if it was opened by swauto.
     """
     self._check_thread()
 
