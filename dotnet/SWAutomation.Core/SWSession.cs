@@ -223,13 +223,7 @@ namespace SWAutomation.Core
             });
         }
 
-        public struct ComponentTransformDto
-        {
-            public double X, Y, Z;      // meters
-            public double[,] R;         // 3x3 rotation matrix
-        }
-
-        public ComponentTransformDto AssemblyGetComponentTransform(
+        public double[] AssemblyGetComponentTransform(
             string assemblyId,
             string componentRef
         )
@@ -251,18 +245,7 @@ namespace SWAutomation.Core
 
                 var a = (double[])t.ArrayData; // expect 12-length (or compatible)
 
-                return new ComponentTransformDto
-                {
-                    X = a[9],
-                    Y = a[10],
-                    Z = a[11],
-                    R = new double[,]
-                    {
-                        { a[0], a[1], a[2] },
-                        { a[3], a[4], a[5] },
-                        { a[6], a[7], a[8] }
-                    }
-                };
+                return a;
             });
         }
 
