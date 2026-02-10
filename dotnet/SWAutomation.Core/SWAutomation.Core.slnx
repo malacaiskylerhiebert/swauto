@@ -4,5 +4,5 @@
     <BuildType Name="Release" />
     <BuildType Name="x64" />
   </Configurations>
-  <Project Path="SWAutomation.Core.csproj" />
+  <Project Path="SWAutomation.Core.csproj" Id="acff72c0-6467-4431-a568-2f9dc6bd68f0" />
 </Solution>
