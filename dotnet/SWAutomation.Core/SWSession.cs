@@ -223,10 +223,90 @@ namespace SWAutomation.Core
             });
         }
 
+        public struct ComponentTransformDto
+        {
+            public double X, Y, Z;      // meters
+            public double[,] R;         // 3x3 rotation matrix
+        }
+
+        public ComponentTransformDto AssemblyGetComponentTransform(
+            string assemblyId,
+            string componentRef
+        )
+        {
+            return InvokeSW(app =>
+            {
+                var doc = GetDoc(assemblyId);
+                var asm = doc as AssemblyDoc;
+                if (asm == null)
+                    throw new InvalidOperationException("docId is not an assembly.");
+
+                var comp = ResolveComponent(asm, componentRef);
+
+                MathTransform t = null;
+                try { t = comp.GetTotalTransform(true); } catch { }
+                if (t == null) t = comp.Transform2;
+                if (t == null)
+                    throw new InvalidOperationException("Component has no transform.");
+
+                var a = (double[])t.ArrayData; // expect 12-length (or compatible)
+
+                return new ComponentTransformDto
+                {
+                    X = a[9],
+                    Y = a[10],
+                    Z = a[11],
+                    R = new double[,]
+                    {
+                        { a[0], a[1], a[2] },
+                        { a[3], a[4], a[5] },
+                        { a[6], a[7], a[8] }
+                    }
+                };
+            });
+        }
+
+        public void AssemblySetComponentTransform(
+            string assemblyId,
+            string componentRef,
+            double x, double y, double z,     // meters
+            double[,] rot3x3                  // 3x3
+        )
+        {
+            InvokeSW(app =>
+            {
+                var doc = GetDoc(assemblyId);
+                var asm = doc as AssemblyDoc;
+                if (asm == null)
+                    throw new InvalidOperationException("docId is not an assembly.");
+
+                var comp = ResolveComponent(asm, componentRef);
+
+                if (rot3x3 == null || rot3x3.GetLength(0) != 3 || rot3x3.GetLength(1) != 3)
+                    throw new ArgumentException("rot3x3 must be 3x3.");
+
+                var mu = (MathUtility)app.GetMathUtility();
+
+                // SolidWorks MathTransform: [0..8]=R (row-major), [9..11]=T (meters)
+                var a = new double[12]
+                {
+                    rot3x3[0,0], rot3x3[0,1], rot3x3[0,2],
+                    rot3x3[1,0], rot3x3[1,1], rot3x3[1,2],
+                    rot3x3[2,0], rot3x3[2,1], rot3x3[2,2],
+                    x, y, z
+                };
+
+                var newT = (MathTransform)mu.CreateTransform(a);
+                comp.Transform2 = newT;
+
+                return 0;
+            });
+        }
+
         public void AssemblyTranslateComponent(
             string assemblyId,
-            string componentRef,   // name OR docId
-            double dx, double dy, double dz
+            string componentRef,
+            double dx, double dy, double dz   // meters
         )
         {
             InvokeSW(app =>
@@ -244,17 +324,18 @@ namespace SWAutomation.Core
                 if (cur == null)
                     throw new InvalidOperationException("Component has no transform.");
 
-                var curArr = (double[])cur.ArrayData;
-
-                var tArr = new double[]
+                // Delta transform: identity rotation + translation in [9..11]
+                var d = new double[12]
                 {
-                    1,0,0,0,
-                    0,1,0,0,
-                    0,0,1,0,
-                    dx,dy,dz,1
+                    1,0,0,
+                    0,1,0,
+                    0,0,1,
+                    dx,dy,dz
                 };
 
-                var delta = (MathTransform)mu.CreateTransform(tArr);
+                var delta = (MathTransform)mu.CreateTransform(d);
+
+                // Premultiply = translate in ASSEMBLY frame
                 var newT = (MathTransform)delta.Multiply(cur);
 
                 comp.Transform2 = newT;
@@ -263,10 +344,10 @@ namespace SWAutomation.Core
         }
 
 
-        public void AssemblyRotateComponent(
+        public void AssemblyRotateComponentInPlace(
             string assemblyId,
-            string componentRef,   // name OR docId
-            double rx, double ry, double rz
+            string componentRef,     // name OR docId
+            double[,] rot3x3         // delta rotation matrix
         )
         {
             InvokeSW(app =>
@@ -278,37 +359,47 @@ namespace SWAutomation.Core
 
                 var comp = ResolveComponent(asm, componentRef);
 
+                if (rot3x3 == null || rot3x3.GetLength(0) != 3 || rot3x3.GetLength(1) != 3)
+                    throw new ArgumentException("rot3x3 must be 3x3.");
+
                 var mu = (MathUtility)app.GetMathUtility();
                 var cur = comp.Transform2;
                 if (cur == null)
                     throw new InvalidOperationException("Component has no transform.");
 
-                double cx = Math.Cos(rx), sx = Math.Sin(rx);
-                double cy = Math.Cos(ry), sy = Math.Sin(ry);
-                double cz = Math.Cos(rz), sz = Math.Sin(rz);
+                var curArr = (double[])cur.ArrayData;
+                double px = curArr[9];
+                double py = curArr[10];
+                double pz = curArr[11];
 
-                double r11 = cz * cy;
-                double r12 = cz * sy * sx - sz * cx;
-                double r13 = cz * sy * cx + sz * sx;
-
-                double r21 = sz * cy;
-                double r22 = sz * sy * sx + cz * cx;
-                double r23 = sz * sy * cx - cz * sx;
-
-                double r31 = -sy;
-                double r32 = cy * sx;
-                double r33 = cy * cx;
-
-                var rArr = new double[]
+                // delta rotation (row-major, no translation)
+                var dRot = new double[12]
                 {
-                    r11, r21, r31, 0,
-                    r12, r22, r32, 0,
-                    r13, r23, r33, 0,
-                    0,   0,   0,   1
+                    rot3x3[0,0], rot3x3[0,1], rot3x3[0,2],
+                    rot3x3[1,0], rot3x3[1,1], rot3x3[1,2],
+                    rot3x3[2,0], rot3x3[2,1], rot3x3[2,2],
+                    0, 0, 0
                 };
+                var R = (MathTransform)mu.CreateTransform(dRot);
 
-                var delta = (MathTransform)mu.CreateTransform(rArr);
-                var newT = (MathTransform)delta.Multiply(cur);
+                MathTransform T(double x, double y, double z)
+                {
+                    return (MathTransform)mu.CreateTransform(new double[12]
+                    {
+                1,0,0,
+                0,1,0,
+                0,0,1,
+                x,y,z
+                    });
+                }
+
+                // rotate about component origin:
+                // T(p) * R * T(-p) * cur
+                var swing = (MathTransform)
+                    T(px, py, pz)
+                    .Multiply((MathTransform)R.Multiply(T(-px, -py, -pz)));
+
+                var newT = (MathTransform)swing.Multiply(cur);
 
                 comp.Transform2 = newT;
                 return 0;

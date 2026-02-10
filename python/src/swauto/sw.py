@@ -142,6 +142,21 @@ class Assembly(_Document):
     comp_ref = comp._id if hasattr(comp, "_id") else str(comp)
     self._session.AssemblySetComponentFixed(self._id, comp_ref, bool(fixed))
 
+  def get_component_transform(self, comp):
+    comp_ref = comp._id if hasattr(comp, "_id") else str(comp)
+    return self._session.AssemblyGetComponentTransform(self._id, comp_ref)
+
+  def set_component_transform(self, comp, pos, rot_matrix):
+    comp_ref = comp._id if hasattr(comp, "_id") else str(comp)
+    self._session.AssemblySetComponentTransform(
+      self._id,
+      comp_ref,
+      pos[0],
+      pos[1],
+      pos[2],
+      rot_matrix
+    )
+
   def translate_component(self, comp, dx: float, dy: float, dz: float):
     """dx/dy/dz in meters."""
     comp_ref = comp._id if hasattr(comp, "_id") else str(comp)
@@ -153,15 +168,10 @@ class Assembly(_Document):
       float(dz)
     )
 
-  def rotate_component(self, comp, rx: float, ry: float, rz: float):
-    """
-    Rotate component by rx, ry, rz radians about X, Y, Z.
-    """
+  def rotate_component_in_place(self, comp, rot_matrix):
     comp_ref = comp._id if hasattr(comp, "_id") else str(comp)
-    self._session.AssemblyRotateComponent(
+    self._session.AssemblyRotateComponentInPlace(
       self._id,
       comp_ref,
-      float(rx),
-      float(ry),
-      float(rz),
+      rot_matrix
     )
